@@ -6,11 +6,9 @@ export function validate(schema: ZodSchema) {
     const parsed = schema.parse({ body: req.body, params: req.params, query: req.query }) as {
       body?: unknown;
       params?: Request['params'];
-      query?: Request['query'];
     };
     req.body = parsed.body ?? req.body;
     req.params = parsed.params ?? req.params;
-    req.query = parsed.query ?? req.query;
     next();
   };
 }
