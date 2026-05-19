@@ -10,7 +10,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-4000}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-car_reminder}?schema=public}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@car-reminder-postgres:5432/${POSTGRES_DB:-car_reminder}?schema=public}
       CLIENT_URL: ${CLIENT_URL:-http://localhost:5173}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-replace-with-at-least-32-characters-access-secret}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-replace-with-at-least-32-characters-refresh-secret}
@@ -25,6 +25,8 @@ services:
       TRUST_PROXY: ${TRUST_PROXY:-false}
     ports:
       - "${API_PORT:-4000}:4000"
+    networks:
+      - nova-net
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health >/dev/null 2>&1 || exit 1"]
       interval: 30s
@@ -42,6 +44,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-car_reminder}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      nova-net:
+        aliases:
+          - car-reminder-postgres
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -49,3 +55,7 @@ services:
       retries: 5
 volumes:
   postgres_data:
+networks:
+  nova-net:
+    external: true
+    name: ${DOCKER_NETWORK:-nova-net}
