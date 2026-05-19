@@ -34,6 +34,6 @@ export async function runReminderCheck() {
 export function startReminderCron() {
   cron.schedule(env.REMINDER_CRON, () => {
     runReminderCheck().catch(console.error);
-  });
-  console.log(`Reminder cron scheduled: ${env.REMINDER_CRON}`);
+  }, { timezone: env.REMINDER_CRON_TIMEZONE });
+  console.log(`Reminder cron scheduled: ${env.REMINDER_CRON} (${env.REMINDER_CRON_TIMEZONE})`);
 }

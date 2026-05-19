@@ -7,9 +7,9 @@ const body = z.object({
   title: z.string().min(1),
   category: category.default('CUSTOM'),
   expiresAt: z.coerce.date(),
-  notifyBeforeDays: z.number().int().min(0).default(7),
+  notifyBeforeDays: z.coerce.number().int().min(0).default(7),
   repeat: repeat.default('NONE'),
-  customRepeatDays: z.number().int().min(1).optional(),
+  customRepeatDays: z.coerce.number().int().min(1).optional(),
   notes: z.string().optional()
 });
 

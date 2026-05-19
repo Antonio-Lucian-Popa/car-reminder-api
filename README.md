@@ -17,6 +17,39 @@ npm run dev
 API: `http://localhost:4000`
 Health check: `GET /health`
 
+## Docker production
+
+```bash
+cp .env.example .env
+# completează valorile din .env
+docker compose up -d --build
+```
+
+Compose pornește:
+
+- `api` - backend-ul Express compilat TypeScript
+- `postgres` - PostgreSQL 16 cu volum persistent `postgres_data`
+
+La pornire, containerul API rulează `prisma migrate deploy`, apoi `node dist/server.js`.
+
+Variabile importante în `.env`:
+
+```env
+NODE_ENV=production
+API_PORT=4000
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your-strong-db-password
+POSTGRES_DB=car_reminder
+POSTGRES_PORT=5432
+DATABASE_URL="postgresql://postgres:your-strong-db-password@postgres:5432/car_reminder?schema=public"
+CLIENT_URL="https://app.example.com"
+JWT_ACCESS_SECRET="openssl-rand-hex-32"
+JWT_REFRESH_SECRET="another-openssl-rand-hex-32"
+TRUST_PROXY=true
+```
+
+Folosește `TRUST_PROXY=true` când API-ul este în spatele unui reverse proxy precum Nginx, Traefik, Caddy sau un load balancer.
+
 ## Auth flow
 
 - `POST /api/auth/register` → returnează `user`, `accessToken`, `refreshToken`

@@ -5,7 +5,7 @@ import morgan from 'morgan';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
-import { env } from './config/env';
+import { allowedOrigins, env } from './config/env';
 import { authRouter } from './modules/auth/auth.routes';
 import { usersRouter } from './modules/users/users.routes';
 import { carsRouter } from './modules/cars/cars.routes';
@@ -15,8 +15,9 @@ import { errorHandler, notFound } from './middleware/error';
 
 export const app = express();
 
+if (env.TRUST_PROXY) app.set('trust proxy', 1);
 app.use(helmet());
-app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
+app.use(cors({ origin: allowedOrigin, credentials: true }));
 app.use(compression());
 app.use(cookieParser());
 app.use(express.json({ limit: '1mb' }));
@@ -32,3 +33,8 @@ app.use('/api/notifications', notificationsRouter);
 
 app.use(notFound);
 app.use(errorHandler);
+
+function allowedOrigin(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+  if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+  return callback(null, false);
+}

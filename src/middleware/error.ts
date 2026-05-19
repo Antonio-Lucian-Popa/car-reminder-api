@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
+import { ZodError } from 'zod';
 import { AppError } from '../lib/errors';
 
 export function notFound(req: Request, _res: Response) {
@@ -9,6 +10,9 @@ export function notFound(req: Request, _res: Response) {
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({ message: err.message, code: err.code });
+  }
+  if (err instanceof ZodError) {
+    return res.status(400).json({ message: 'Validation error', issues: err.issues });
   }
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === 'P2002') return res.status(409).json({ message: 'Resource already exists' });

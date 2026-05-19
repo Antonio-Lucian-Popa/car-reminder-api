@@ -3,10 +3,10 @@ import { z } from 'zod';
 const carBody = z.object({
   make: z.string().min(1),
   model: z.string().min(1),
-  year: z.number().int().min(1900).max(2100).optional(),
+  year: z.coerce.number().int().min(1900).max(2100).optional(),
   plateNumber: z.string().min(1),
   vin: z.string().optional(),
-  mileage: z.number().int().min(0).optional(),
+  mileage: z.coerce.number().int().min(0).optional(),
   imageUrl: z.string().url().optional(),
   color: z.string().optional()
 });

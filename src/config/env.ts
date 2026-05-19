@@ -16,7 +16,10 @@ const schema = z.object({
   VAPID_PUBLIC_KEY: z.string().optional().default(''),
   VAPID_PRIVATE_KEY: z.string().optional().default(''),
   VAPID_SUBJECT: z.string().optional().default('mailto:admin@example.com'),
-  REMINDER_CRON: z.string().default('0 8 * * *')
+  REMINDER_CRON: z.string().default('0 8 * * *'),
+  REMINDER_CRON_TIMEZONE: z.string().default('Europe/Bucharest'),
+  TRUST_PROXY: z.coerce.boolean().default(false)
 });
 
 export const env = schema.parse(process.env);
+export const allowedOrigins = env.CLIENT_URL.split(',').map((origin) => origin.trim()).filter(Boolean);

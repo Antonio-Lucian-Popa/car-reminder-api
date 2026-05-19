@@ -19,21 +19,24 @@ carsRouter.post('/', validate(createCarSchema), async (req, res) => {
 });
 
 carsRouter.get('/:id', validate(carIdSchema), async (req, res) => {
-  const car = await prisma.car.findFirst({ where: { id: req.params.id, userId: req.user!.id }, include: { reminders: { orderBy: { expiresAt: 'asc' } } } });
+  const id = req.params.id as string;
+  const car = await prisma.car.findFirst({ where: { id, userId: req.user!.id }, include: { reminders: { orderBy: { expiresAt: 'asc' } } } });
   if (!car) throw new AppError(404, 'Car not found');
   res.json(car);
 });
 
 carsRouter.patch('/:id', validate(updateCarSchema), async (req, res) => {
-  const existing = await prisma.car.findFirst({ where: { id: req.params.id, userId: req.user!.id } });
+  const id = req.params.id as string;
+  const existing = await prisma.car.findFirst({ where: { id, userId: req.user!.id } });
   if (!existing) throw new AppError(404, 'Car not found');
-  const car = await prisma.car.update({ where: { id: req.params.id }, data: req.body });
+  const car = await prisma.car.update({ where: { id }, data: req.body });
   res.json(car);
 });
 
 carsRouter.delete('/:id', validate(carIdSchema), async (req, res) => {
-  const existing = await prisma.car.findFirst({ where: { id: req.params.id, userId: req.user!.id } });
+  const id = req.params.id as string;
+  const existing = await prisma.car.findFirst({ where: { id, userId: req.user!.id } });
   if (!existing) throw new AppError(404, 'Car not found');
-  await prisma.car.delete({ where: { id: req.params.id } });
+  await prisma.car.delete({ where: { id } });
   res.status(204).send();
 });
