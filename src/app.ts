@@ -29,7 +29,8 @@ app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 300 }));
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', app: 'car-reminder-backend' }));
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Serves uploads at /api/uploads/... so nginx /car-reminder/api/ proxy covers it
+app.use('/api/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);

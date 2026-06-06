@@ -18,7 +18,8 @@ const schema = z.object({
   VAPID_SUBJECT: z.string().optional().default('mailto:admin@example.com'),
   REMINDER_CRON: z.string().default('0 8 * * *'),
   REMINDER_CRON_TIMEZONE: z.string().default('Europe/Bucharest'),
-  TRUST_PROXY: z.coerce.boolean().default(false)
+  TRUST_PROXY: z.coerce.boolean().default(false),
+  PUBLIC_URL: z.string().default('http://localhost:4000')
 });
 
 export const env = schema.parse(process.env);

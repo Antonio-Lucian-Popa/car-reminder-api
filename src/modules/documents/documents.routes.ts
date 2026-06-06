@@ -6,6 +6,7 @@ import { prisma } from '../../lib/prisma';
 import { requireAuth } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import { AppError } from '../../lib/errors';
+import { env } from '../../config/env';
 import { createDocumentSchema, docListSchema, docIdSchema } from './documents.schema';
 
 export const documentsRouter = Router();
@@ -55,7 +56,7 @@ documentsRouter.post('/', upload.single('file'), validate(createDocumentSchema),
   if (!req.file) throw new AppError(400, 'File is required');
   const { carId, type, title, linkedCostId, linkedReminderId } = req.body;
   await getOwnedCarIds(req.user!.id, carId);
-  const imageUrl = `/uploads/documents/${req.file.filename}`;
+  const imageUrl = `${env.PUBLIC_URL}/api/uploads/documents/${req.file.filename}`;
   const doc = await prisma.document.create({
     data: { carId, type, title, imageUrl, linkedCostId, linkedReminderId },
   });
@@ -69,8 +70,9 @@ documentsRouter.delete('/:id', validate(docIdSchema), async (req, res) => {
   });
   if (!doc || doc.car.userId !== req.user!.id) throw new AppError(404, 'Document not found');
 
-  // Remove file from disk
-  const filePath = path.join(process.cwd(), doc.imageUrl);
+  // Remove file from disk (extract relative path from full URL)
+  const filename = path.basename(doc.imageUrl);
+  const filePath = path.join(process.cwd(), 'uploads', 'documents', filename);
   fs.unlink(filePath, () => {/* best-effort */});
 
   await prisma.document.delete({ where: { id: doc.id } });
