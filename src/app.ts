@@ -1,3 +1,4 @@
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -11,6 +12,9 @@ import { usersRouter } from './modules/users/users.routes';
 import { carsRouter } from './modules/cars/cars.routes';
 import { remindersRouter } from './modules/reminders/reminders.routes';
 import { notificationsRouter } from './modules/notifications/notifications.routes';
+import { costsRouter } from './modules/costs/costs.routes';
+import { fuelRouter } from './modules/fuel/fuel.routes';
+import { documentsRouter } from './modules/documents/documents.routes';
 import { errorHandler, notFound } from './middleware/error';
 
 export const app = express();
@@ -25,11 +29,16 @@ app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 300 }));
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', app: 'car-reminder-backend' }));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/cars', carsRouter);
 app.use('/api/reminders', remindersRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/costs', costsRouter);
+app.use('/api/fuel', fuelRouter);
+app.use('/api/documents', documentsRouter);
 
 app.use(notFound);
 app.use(errorHandler);

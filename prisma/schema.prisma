@@ -89,9 +89,94 @@ model Car {
 
   user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   reminders       Reminder[]
+  costs           Cost[]
+  fuelLogs        FuelLog[]
+  documents       Document[]
 
   @@unique([userId, plateNumber])
   @@index([userId])
+}
+
+enum CostCategory {
+  FUEL
+  REPAIR
+  SERVICE
+  INSURANCE
+  ROAD_TAX
+  ROVINIETA
+  ITP
+  PARKING
+  WASHING
+  PARTS
+  OTHER
+}
+
+enum FuelKind {
+  benzina
+  motorina
+  gpl
+  electric
+  hybrid
+}
+
+enum DocumentType {
+  RCA
+  CASCO
+  ITP
+  ROVINIETA
+  INVOICE
+  FUEL_RECEIPT
+  SERVICE_RECEIPT
+  OTHER
+}
+
+model Cost {
+  id              String       @id @default(uuid())
+  car             Car          @relation(fields: [carId], references: [id], onDelete: Cascade)
+  carId           String
+  category        CostCategory
+  amount          Decimal      @db.Decimal(10, 2)
+  currency        String       @default("RON")
+  date            DateTime
+  mileage         Int?
+  vendor          String?
+  notes           String?
+  receiptImageUrl String?
+  createdAt       DateTime     @default(now())
+
+  @@index([carId, date])
+}
+
+model FuelLog {
+  id              String   @id @default(uuid())
+  car             Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  carId           String
+  date            DateTime
+  station         String?
+  fuelType        FuelKind
+  liters          Decimal  @db.Decimal(8, 2)
+  pricePerLiter   Decimal  @db.Decimal(8, 3)
+  total           Decimal  @db.Decimal(10, 2)
+  mileage         Int?
+  fullTank        Boolean  @default(true)
+  receiptImageUrl String?
+  createdAt       DateTime @default(now())
+
+  @@index([carId, date])
+}
+
+model Document {
+  id               String       @id @default(uuid())
+  car              Car          @relation(fields: [carId], references: [id], onDelete: Cascade)
+  carId            String
+  type             DocumentType
+  title            String
+  imageUrl         String
+  linkedCostId     String?
+  linkedReminderId String?
+  createdAt        DateTime     @default(now())
+
+  @@index([carId])
 }
 
 model Reminder {

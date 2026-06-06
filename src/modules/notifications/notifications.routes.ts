@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../../lib/prisma';
 import { requireAuth } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
-import { subscribeSchema, unsubscribeSchema } from './notifications.schema';
+import { subscribeSchema, unsubscribeSchema, expoTokenSchema } from './notifications.schema';
 import { env } from '../../config/env';
 
 export const notificationsRouter = Router();
@@ -31,4 +31,25 @@ notificationsRouter.post('/unsubscribe', validate(unsubscribeSchema), async (req
     data: { isActive: false }
   });
   res.json({ success: true });
+});
+
+// Simplified Expo Push Token endpoints for mobile app
+notificationsRouter.post('/expo-token', validate(expoTokenSchema), async (req, res) => {
+  const { token, platform } = req.body as { token: string; platform?: 'ios' | 'android' };
+  const devicePlatform = platform ? (platform.toUpperCase() as 'IOS' | 'ANDROID') : 'ANDROID';
+  await prisma.notificationDevice.upsert({
+    where: { userId_expoPushToken: { userId: req.user!.id, expoPushToken: token } },
+    update: { isActive: true, platform: devicePlatform },
+    create: { userId: req.user!.id, type: 'EXPO_PUSH', platform: devicePlatform, expoPushToken: token },
+  });
+  res.status(204).send();
+});
+
+notificationsRouter.delete('/expo-token', validate(expoTokenSchema), async (req, res) => {
+  const { token } = req.body as { token: string };
+  await prisma.notificationDevice.updateMany({
+    where: { userId: req.user!.id, expoPushToken: token },
+    data: { isActive: false },
+  });
+  res.status(204).send();
 });

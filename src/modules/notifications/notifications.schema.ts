@@ -22,3 +22,10 @@ export const unsubscribeSchema = z.object({
   body: z.object({ endpoint: z.string().optional(), expoPushToken: z.string().optional() })
     .refine((value) => Boolean(value.endpoint || value.expoPushToken), 'endpoint or expoPushToken is required')
 });
+
+export const expoTokenSchema = z.object({
+  body: z.object({
+    token: z.string().min(1),
+    platform: z.enum(['ios', 'android']).optional(),
+  }),
+});
