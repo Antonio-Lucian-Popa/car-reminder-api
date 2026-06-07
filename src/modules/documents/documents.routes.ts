@@ -56,7 +56,8 @@ documentsRouter.post('/', upload.single('file'), validate(createDocumentSchema),
   if (!req.file) throw new AppError(400, 'File is required');
   const { carId, type, title, linkedCostId, linkedReminderId } = req.body;
   await getOwnedCarIds(req.user!.id, carId);
-  const imageUrl = `${env.PUBLIC_URL}/api/uploads/documents/${req.file.filename}`;
+  const publicUrl = env.PUBLIC_URL.replace(/\/$/, '');
+  const imageUrl = `${publicUrl}/api/uploads/documents/${req.file.filename}`;
   const doc = await prisma.document.create({
     data: { carId, type, title, imageUrl, linkedCostId, linkedReminderId },
   });
