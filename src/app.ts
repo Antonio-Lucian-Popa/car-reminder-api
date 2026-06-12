@@ -15,6 +15,7 @@ import { notificationsRouter } from './modules/notifications/notifications.route
 import { costsRouter } from './modules/costs/costs.routes';
 import { fuelRouter } from './modules/fuel/fuel.routes';
 import { documentsRouter } from './modules/documents/documents.routes';
+import { companyRouter } from './modules/company/company.routes';
 import { errorHandler, notFound } from './middleware/error';
 
 export const app = express();
@@ -29,11 +30,11 @@ app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 300 }));
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', app: 'car-reminder-backend' }));
-// Serves uploads at /api/uploads/... so nginx /car-reminder/api/ proxy covers it
 app.use('/api/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/company', companyRouter);
 app.use('/api/cars', carsRouter);
 app.use('/api/reminders', remindersRouter);
 app.use('/api/notifications', notificationsRouter);

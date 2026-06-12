@@ -2,7 +2,7 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import crypto from 'crypto';
 import { env } from '../config/env';
 
-export type AccessTokenPayload = { sub: string; email: string };
+export type AccessTokenPayload = { sub: string; email: string; companyId: string; role: string };
 export type RefreshTokenPayload = { sub: string; jti: string };
 
 export function signAccessToken(payload: AccessTokenPayload) {
