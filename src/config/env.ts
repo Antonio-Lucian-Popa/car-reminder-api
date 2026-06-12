@@ -19,7 +19,8 @@ const schema = z.object({
   REMINDER_CRON: z.string().default('0 8 * * *'),
   REMINDER_CRON_TIMEZONE: z.string().default('Europe/Bucharest'),
   TRUST_PROXY: z.coerce.boolean().default(false),
-  PUBLIC_URL: z.string().default('http://localhost:4000')
+  PUBLIC_URL: z.string().default('http://localhost:4000'),
+  ANTHROPIC_API_KEY: z.string().default('')
 });
 
 export const env = schema.parse(process.env);

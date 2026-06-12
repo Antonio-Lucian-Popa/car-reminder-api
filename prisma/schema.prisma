@@ -84,6 +84,23 @@ enum DocumentType {
   OTHER
 }
 
+enum TripStatus {
+  ACTIVE
+  CLOSED
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum ExpenseCategory {
+  COMBUSTIBIL
+  MASA
+  CAZARE
+  TRANSPORT
+  DIURNA
+  ALTELE
+}
+
 model Company {
   id              String   @id @default(uuid())
   name            String
@@ -93,21 +110,23 @@ model Company {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  users User[]
-  cars  Car[]
+  users    User[]
+  cars     Car[]
+  trips    Trip[]
+  expenses Expense[]
 }
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
+  id           String   @id @default(uuid())
+  email        String   @unique
   passwordHash String
   firstName    String?
   lastName     String?
   companyId    String
-  role         UserRole  @default(EMPLOYEE)
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  role         UserRole @default(EMPLOYEE)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   company       Company              @relation(fields: [companyId], references: [id], onDelete: Restrict)
   refreshTokens RefreshToken[]
@@ -117,11 +136,11 @@ model User {
 }
 
 model RefreshToken {
-  id        String    @id @default(uuid())
-  tokenHash String    @unique
-  userId    String
-  expiresAt DateTime
-  revokedAt DateTime?
+  id         String    @id @default(uuid())
+  tokenHash  String    @unique
+  userId     String
+  expiresAt  DateTime
+  revokedAt  DateTime?
   replacedBy String?
   createdAt  DateTime  @default(now())
 
@@ -132,25 +151,26 @@ model RefreshToken {
 }
 
 model Car {
-  id               String   @id @default(uuid())
-  companyId        String
-  assignedUserId   String?
-  make             String
-  model            String
-  year             Int?
-  plateNumber      String
-  vin              String?
-  mileage          Int?
-  imageUrl         String?
-  color            String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id             String   @id @default(uuid())
+  companyId      String
+  assignedUserId String?
+  make           String
+  model          String
+  year           Int?
+  plateNumber    String
+  vin            String?
+  mileage        Int?
+  imageUrl       String?
+  color          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   reminders Reminder[]
   costs     Cost[]
   fuelLogs  FuelLog[]
   documents Document[]
+  trips     Trip[]
 
   @@unique([companyId, plateNumber])
   @@index([companyId])
@@ -158,7 +178,6 @@ model Car {
 
 model Cost {
   id              String       @id @default(uuid())
-  car             Car          @relation(fields: [carId], references: [id], onDelete: Cascade)
   carId           String
   category        CostCategory
   amount          Decimal      @db.Decimal(10, 2)
@@ -171,30 +190,32 @@ model Cost {
   linkedExpenseId String?
   createdAt       DateTime     @default(now())
 
+  car Car @relation(fields: [carId], references: [id], onDelete: Cascade)
+
   @@index([carId, date])
 }
 
 model FuelLog {
-  id            String   @id @default(uuid())
-  car           Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
-  carId         String
-  date          DateTime
-  station       String?
-  fuelType      FuelKind
-  liters        Decimal  @db.Decimal(8, 2)
-  pricePerLiter Decimal  @db.Decimal(8, 3)
-  total         Decimal  @db.Decimal(10, 2)
-  mileage       Int?
-  fullTank      Boolean  @default(true)
+  id              String   @id @default(uuid())
+  carId           String
+  date            DateTime
+  station         String?
+  fuelType        FuelKind
+  liters          Decimal  @db.Decimal(8, 2)
+  pricePerLiter   Decimal  @db.Decimal(8, 3)
+  total           Decimal  @db.Decimal(10, 2)
+  mileage         Int?
+  fullTank        Boolean  @default(true)
   receiptImageUrl String?
-  createdAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  car Car @relation(fields: [carId], references: [id], onDelete: Cascade)
 
   @@index([carId, date])
 }
 
 model Document {
   id               String       @id @default(uuid())
-  car              Car          @relation(fields: [carId], references: [id], onDelete: Cascade)
   carId            String
   type             DocumentType
   title            String
@@ -202,6 +223,8 @@ model Document {
   linkedCostId     String?
   linkedReminderId String?
   createdAt        DateTime     @default(now())
+
+  car Car @relation(fields: [carId], references: [id], onDelete: Cascade)
 
   @@index([carId])
 }
@@ -248,4 +271,52 @@ model NotificationDevice {
   @@index([userId])
   @@unique([userId, endpoint])
   @@unique([userId, expoPushToken])
+}
+
+model Trip {
+  id          String     @id @default(uuid())
+  companyId   String
+  userId      String
+  destination String
+  purpose     String?
+  startDate   DateTime
+  endDate     DateTime?
+  budget      Decimal?   @db.Decimal(10, 2)
+  carId       String?
+  kmStart     Int?
+  kmEnd       Int?
+  status      TripStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  company  Company   @relation(fields: [companyId], references: [id])
+  car      Car?      @relation(fields: [carId], references: [id])
+  expenses Expense[]
+
+  @@index([companyId, userId])
+  @@index([companyId, status])
+}
+
+model Expense {
+  id          String          @id @default(uuid())
+  companyId   String
+  userId      String
+  tripId      String?
+  category    ExpenseCategory @default(ALTELE)
+  amount      Decimal         @db.Decimal(10, 2)
+  currency    String          @default("RON")
+  date        DateTime
+  merchant    String?
+  merchantCif String?
+  notes       String?
+  imageUrl    String?
+  ocrRaw      Json?
+  verified    Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+  trip    Trip?   @relation(fields: [tripId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, date])
+  @@index([tripId])
 }
