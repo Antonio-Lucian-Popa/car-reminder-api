@@ -160,6 +160,17 @@ reportsRouter.get('/:id/download', validate(reportIdSchema), async (req, res) =>
   fs.createReadStream(report.pdfPath).pipe(res);
 });
 
+// DELETE /api/reports/:id
+reportsRouter.delete('/:id', validate(reportIdSchema), async (req, res) => {
+  const report = await prisma.report.findFirst({
+    where: { id: String(req.params.id), companyId: req.user!.companyId },
+  });
+  if (!report) throw new AppError(404, 'Report not found');
+  if (fs.existsSync(report.pdfPath)) fs.unlinkSync(report.pdfPath);
+  await prisma.report.delete({ where: { id: report.id } });
+  res.status(204).end();
+});
+
 // POST /api/reports/:id/send
 reportsRouter.post('/:id/send', validate(sendReportSchema), async (req, res) => {
   const report = await prisma.report.findFirst({

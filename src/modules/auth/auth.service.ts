@@ -75,6 +75,34 @@ export async function refresh(refreshToken: string) {
   return { accessToken, refreshToken: newRefreshToken };
 }
 
+export async function activateInvite(input: { token: string; password: string }) {
+  const tokenHash = hashToken(input.token);
+  const invitation = await prisma.invitationToken.findUnique({
+    where: { tokenHash },
+    include: { user: true }
+  });
+
+  if (!invitation || invitation.usedAt || invitation.expiresAt < new Date()) {
+    throw new AppError(400, 'Invitation link is invalid or expired');
+  }
+
+  const passwordHash = await bcrypt.hash(input.password, env.BCRYPT_SALT_ROUNDS);
+  const user = await prisma.$transaction(async (tx) => {
+    const updatedUser = await tx.user.update({
+      where: { id: invitation.userId },
+      data: { passwordHash, isActive: true }
+    });
+    await tx.invitationToken.update({
+      where: { id: invitation.id },
+      data: { usedAt: new Date() }
+    });
+    return updatedUser;
+  });
+
+  const tokens = await issueTokens(user);
+  return { user: publicUser(user), ...tokens };
+}
+
 export async function logout(refreshToken: string) {
   const tokenHash = hashToken(refreshToken);
   await prisma.refreshToken.updateMany({ where: { tokenHash, revokedAt: null }, data: { revokedAt: new Date() } });

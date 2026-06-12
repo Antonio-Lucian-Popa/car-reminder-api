@@ -45,12 +45,12 @@ export async function sendReportEmail(options: {
 export async function sendInviteEmail(options: {
   to: string;
   companyName: string;
-  temporaryPassword: string;
+  acceptUrl: string;
 }) {
   return sendMail({
     to: options.to,
     subject: `Invitație la ${options.companyName}`,
-    text: `Ai fost invitat în ${options.companyName}.\n\nParolă temporară: ${options.temporaryPassword}\n\nSchimb-o la prima autentificare.`,
-    html: `<p>Ai fost invitat în <strong>${options.companyName}</strong>.</p><p>Parolă temporară: <code>${options.temporaryPassword}</code></p><p>Schimb-o la prima autentificare.</p>`,
+    text: `Ai fost invitat în ${options.companyName}.\n\nActivează contul și setează parola aici:\n${options.acceptUrl}\n\nLinkul expiră în 7 zile.`,
+    html: `<p>Ai fost invitat în <strong>${options.companyName}</strong>.</p><p><a href="${options.acceptUrl}">Activează contul și setează parola</a></p><p>Linkul expiră în 7 zile.</p>`,
   });
 }

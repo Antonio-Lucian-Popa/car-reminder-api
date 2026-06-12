@@ -83,11 +83,11 @@ CLIENT_URL=https://yourfrontend.com
 ANTHROPIC_API_KEY=sk-ant-...
 
 # Email rapoarte (opțional)
-SMTP_HOST=smtp.example.com
+SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=user@example.com
-SMTP_PASS=yourpassword
-SMTP_FROM="Demo SRL <noreply@example.com>"
+SMTP_USER=your-gmail-address@gmail.com
+SMTP_PASS=your-google-app-password
+SMTP_FROM="Demo SRL <your-gmail-address@gmail.com>"
 
 # Push notificații (opțional)
 VAPID_PUBLIC_KEY=...

@@ -2,6 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
 
+const FONT_REGULAR = path.join(__dirname, '../assets/NotoSans-Regular.ttf');
+const FONT_BOLD = path.join(__dirname, '../assets/NotoSans-Bold.ttf');
+
 export type ExpenseRow = {
   date: Date;
   category: string;
@@ -75,20 +78,20 @@ function groupByCategory(expenses: ExpenseRow[]) {
 }
 
 function drawHeader(doc: InstanceType<typeof PDFDocument>, title: string, subtitle: string) {
-  doc.fontSize(18).font('Helvetica-Bold').text(title, { align: 'center' });
-  doc.fontSize(11).font('Helvetica').text(subtitle, { align: 'center' });
+  doc.fontSize(18).font(FONT_BOLD).text(title, { align: 'center' });
+  doc.fontSize(11).font(FONT_REGULAR).text(subtitle, { align: 'center' });
   doc.moveDown(1.5);
 }
 
 function drawInfoRow(doc: InstanceType<typeof PDFDocument>, label: string, value: string) {
-  doc.fontSize(10).font('Helvetica-Bold').text(`${label}: `, { continued: true }).font('Helvetica').text(value);
+  doc.fontSize(10).font(FONT_BOLD).text(`${label}: `, { continued: true }).font(FONT_REGULAR).text(value);
 }
 
 function drawExpenseTable(doc: InstanceType<typeof PDFDocument>, expenses: ExpenseRow[]) {
   const groups = groupByCategory(expenses);
   let grandTotal = 0;
 
-  doc.fontSize(11).font('Helvetica-Bold').text('Cheltuieli pe categorii:');
+  doc.fontSize(11).font(FONT_BOLD).text('Cheltuieli pe categorii:');
   doc.moveDown(0.5);
 
   for (const [cat, rows] of Object.entries(groups)) {
@@ -96,20 +99,20 @@ function drawExpenseTable(doc: InstanceType<typeof PDFDocument>, expenses: Expen
     const currency = rows[0]?.currency ?? 'RON';
     grandTotal += catTotal;
 
-    doc.fontSize(10).font('Helvetica-Bold').fillColor('#333333')
+    doc.fontSize(10).font(FONT_BOLD).fillColor('#333333')
       .text(`${CATEGORY_LABELS[cat] ?? cat}  —  subtotal: ${formatAmount(catTotal, currency)}`);
 
     for (const row of rows) {
       const merchant = row.merchant ? ` | ${row.merchant}` : '';
       const cif = row.merchantCif ? ` (CIF: ${row.merchantCif})` : '';
-      doc.fontSize(9).font('Helvetica').fillColor('#555555')
+      doc.fontSize(9).font(FONT_REGULAR).fillColor('#555555')
         .text(`  ${formatDate(row.date)}${merchant}${cif}  →  ${formatAmount(row.amount, row.currency)}`);
     }
     doc.moveDown(0.3);
   }
 
   doc.moveDown(0.5);
-  doc.fontSize(12).font('Helvetica-Bold').fillColor('#000000')
+  doc.fontSize(12).font(FONT_BOLD).fillColor('#000000')
     .text(`TOTAL GENERAL: ${formatAmount(grandTotal, expenses[0]?.currency ?? 'RON')}`, { align: 'right' });
 
   return grandTotal;
@@ -145,7 +148,7 @@ export async function generateTripReport(data: TripReportData, outDir: string, p
 
     if (data.trip.budget != null) {
       const diff = data.trip.budget - total;
-      doc.moveDown(0.5).fontSize(10).font('Helvetica').fillColor(diff >= 0 ? '#006600' : '#cc0000')
+      doc.moveDown(0.5).fontSize(10).font(FONT_REGULAR).fillColor(diff >= 0 ? '#006600' : '#cc0000')
         .text(`${diff >= 0 ? 'Economie' : 'Depășire buget'}: ${formatAmount(Math.abs(diff), 'RON')}`, { align: 'right' });
     }
 
@@ -155,10 +158,10 @@ export async function generateTripReport(data: TripReportData, outDir: string, p
       const imgPath = imageLocalPath(expense.imageUrl, publicUrl);
       if (!imgPath) continue;
       doc.addPage();
-      doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000')
+      doc.fontSize(11).font(FONT_BOLD).fillColor('#000000')
         .text(`${CATEGORY_LABELS[expense.category] ?? expense.category} — ${formatDate(expense.date)}`);
-      if (expense.merchant) doc.fontSize(10).font('Helvetica').text(expense.merchant);
-      doc.fontSize(10).font('Helvetica-Bold').text(formatAmount(expense.amount, expense.currency));
+      if (expense.merchant) doc.fontSize(10).font(FONT_REGULAR).text(expense.merchant);
+      doc.fontSize(10).font(FONT_BOLD).text(formatAmount(expense.amount, expense.currency));
       doc.moveDown(0.5);
       try {
         doc.image(imgPath, { fit: [480, 600], align: 'center' });
@@ -199,10 +202,10 @@ export async function generateMonthlyReport(data: MonthlyReportData, outDir: str
       const imgPath = imageLocalPath(expense.imageUrl, publicUrl);
       if (!imgPath) continue;
       doc.addPage();
-      doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000')
+      doc.fontSize(11).font(FONT_BOLD).fillColor('#000000')
         .text(`${CATEGORY_LABELS[expense.category] ?? expense.category} — ${formatDate(expense.date)}`);
-      if (expense.merchant) doc.fontSize(10).font('Helvetica').text(expense.merchant);
-      doc.fontSize(10).font('Helvetica-Bold').text(formatAmount(expense.amount, expense.currency));
+      if (expense.merchant) doc.fontSize(10).font(FONT_REGULAR).text(expense.merchant);
+      doc.fontSize(10).font(FONT_BOLD).text(formatAmount(expense.amount, expense.currency));
       doc.moveDown(0.5);
       try {
         doc.image(imgPath, { fit: [480, 600], align: 'center' });

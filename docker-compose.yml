@@ -10,7 +10,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-4000}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@car-reminder-postgres:5432/${POSTGRES_DB:-car_reminder}?schema=public}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@car-reminder-postgres:5432/${POSTGRES_DB:-car_reminder}?schema=public
       CLIENT_URL: ${CLIENT_URL:-http://localhost:5173}
       PUBLIC_URL: ${PUBLIC_URL:-https://novabytecode.ro/car-reminder}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-replace-with-at-least-32-characters-access-secret}
@@ -24,8 +24,16 @@ services:
       REMINDER_CRON: ${REMINDER_CRON:-0 8 * * *}
       REMINDER_CRON_TIMEZONE: ${REMINDER_CRON_TIMEZONE:-Europe/Bucharest}
       TRUST_PROXY: ${TRUST_PROXY:-false}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@example.com}
     ports:
       - "${API_PORT:-4000}:4000"
+    volumes:
+      - uploads_data:/app/uploads
     networks:
       - nova-net
     healthcheck:
@@ -56,6 +64,7 @@ services:
       retries: 5
 volumes:
   postgres_data:
+  uploads_data:
 networks:
   nova-net:
     external: true
