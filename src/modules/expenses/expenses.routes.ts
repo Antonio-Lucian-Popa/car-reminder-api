@@ -90,22 +90,45 @@ expensesRouter.get('/', validate(listExpensesSchema), async (req, res) => {
 
 expensesRouter.post('/', validate(createExpenseSchema), async (req, res) => {
   let { tripId } = req.body as { tripId?: string };
+  let resolvedTrip: { id: string; carId: string | null } | null = null;
 
   if (!tripId) {
     const activeTrip = await prisma.trip.findFirst({
       where: { companyId: req.user!.companyId, userId: req.user!.id, status: 'ACTIVE' },
+      select: { id: true, carId: true },
     });
-    if (activeTrip) tripId = activeTrip.id;
+    if (activeTrip) { tripId = activeTrip.id; resolvedTrip = activeTrip; }
   } else {
     const trip = await prisma.trip.findFirst({
       where: { id: tripId, companyId: req.user!.companyId },
+      select: { id: true, carId: true },
     });
     if (!trip) throw new AppError(404, 'Trip not found');
+    resolvedTrip = trip;
   }
+
+  const body = req.body as { category: string; amount: string; currency: string; date: Date; merchant?: string; notes?: string };
 
   const expense = await prisma.expense.create({
     data: { ...req.body, tripId: tripId ?? null, companyId: req.user!.companyId, userId: req.user!.id },
   });
+
+  // When a COMBUSTIBIL expense is linked to a trip that has a car, mirror it as a Cost (FUEL)
+  if (body.category === 'COMBUSTIBIL' && resolvedTrip?.carId) {
+    await prisma.cost.create({
+      data: {
+        carId: resolvedTrip.carId,
+        category: 'FUEL',
+        amount: body.amount,
+        currency: body.currency ?? 'RON',
+        date: body.date ?? expense.date,
+        vendor: body.merchant ?? null,
+        notes: body.notes ?? null,
+        linkedExpenseId: expense.id,
+      },
+    });
+  }
+
   res.status(201).json(serializeExpense(expense));
 });
 

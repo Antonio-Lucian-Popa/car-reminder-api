@@ -20,6 +20,7 @@ import { tripsRouter } from './modules/trips/trips.routes';
 import { expensesRouter } from './modules/expenses/expenses.routes';
 import { ocrRouter } from './modules/ocr/ocr.routes';
 import { reportsRouter } from './modules/reports/reports.routes';
+import { fleetRouter } from './modules/fleet/fleet.routes';
 import { errorHandler, notFound } from './middleware/error';
 
 export const app = express();
@@ -49,6 +50,7 @@ app.use('/api/trips', tripsRouter);
 app.use('/api/expenses', expensesRouter);
 app.use('/api/ocr', ocrRouter);
 app.use('/api/reports', reportsRouter);
+app.use('/api/fleet', fleetRouter);
 
 app.use(notFound);
 app.use(errorHandler);
