@@ -1,115 +1,276 @@
-# Car Reminder Backend
+# car-reminder-api — B2B Fleet & Expense API
 
-Backend complet pentru aplicația Car Reminder: Express + TypeScript + Prisma + PostgreSQL + JWT access/refresh tokens + notificări pregătite pentru PWA și Expo.
+Backend Express + TypeScript + Prisma + PostgreSQL pentru management flotă și decont cheltuieli B2B.
+
+## Funcționalități
+
+- **Multi-companie** — izolare completă prin `companyId` la nivel de query
+- **Roluri** — ADMIN / MANAGER / ACCOUNTANT / EMPLOYEE cu permisiuni granulare
+- **Delegații (Trips)** — workflow complet: ACTIVE → CLOSED → SUBMITTED → APPROVED/REJECTED
+- **Cheltuieli** — cu upload bon, OCR automat (Claude Haiku), confirmare manuală
+- **Rapoarte PDF** — per delegație sau lunare, cu imagini bonuri atașate
+- **Email** — trimitere raport la contabil via SMTP
+- **Flotă** — reminder expirare documente (ITP, RCA, ROVINIETA), digest email la 30/14/7/1 zile
+- **Export CSV** — cheltuieli filtrate, UTF-8 cu BOM (compatibil Excel RO)
+
+---
+
+## Roluri
+
+| Rol | Acces |
+|-----|-------|
+| `ADMIN` | Orice acțiune în companie + setări company |
+| `MANAGER` | Vede tot, aprobă/respinge deconturi |
+| `ACCOUNTANT` | Read-only + generare rapoarte |
+| `EMPLOYEE` | Doar propriile trips/cheltuieli |
+
+---
 
 ## Setup
+
+### 1. Cerințe
+
+- Node.js 20+
+- PostgreSQL 15+
+
+### 2. Instalare
 
 ```bash
 npm install
 cp .env.example .env
-docker compose up -d
-npm run prisma:generate
-npm run prisma:migrate -- --name init
+# Editează .env cu valorile tale
+```
+
+### 3. Baza de date
+
+```bash
+npx prisma migrate dev --name init
 npm run seed
-npm run dev
 ```
 
-API: `http://localhost:4000`
-Health check: `GET /health`
+Seed-ul creează:
+- Companie: **Demo SRL** (CIF: RO12345678)
+- 4 useri (parolă: `Demo1234!`):
+  - `admin@demo.local` — ADMIN
+  - `manager@demo.local` — MANAGER
+  - `accountant@demo.local` — ACCOUNTANT
+  - `employee@demo.local` — EMPLOYEE
+- 2 mașini + remindere exemplu
 
-## Docker production
+### 4. Pornire
 
 ```bash
-cp .env.example .env
-# completează valorile din .env
-docker compose up -d --build
+npm run dev      # development (tsx watch)
+npm run build && npm start  # production
 ```
 
-Compose pornește:
+---
 
-- `api` - backend-ul Express compilat TypeScript
-- `postgres` - PostgreSQL 16 cu volum persistent `postgres_data`
-
-La pornire, containerul API rulează `prisma migrate deploy`, apoi `node dist/server.js`.
-
-Variabile importante în `.env`:
+## Variabile de mediu
 
 ```env
-NODE_ENV=production
-API_PORT=4000
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your-strong-db-password
-POSTGRES_DB=car_reminder
-POSTGRES_PORT=5432
-DATABASE_URL="postgresql://postgres:your-strong-db-password@postgres:5432/car_reminder?schema=public"
-CLIENT_URL="https://app.example.com"
-JWT_ACCESS_SECRET="openssl-rand-hex-32"
-JWT_REFRESH_SECRET="another-openssl-rand-hex-32"
-TRUST_PROXY=true
+DATABASE_URL=postgresql://user:pass@localhost:5432/dbname
+
+JWT_ACCESS_SECRET=<min 32 chars>
+JWT_REFRESH_SECRET=<min 32 chars>
+ACCESS_TOKEN_EXPIRES_IN=15m
+REFRESH_TOKEN_EXPIRES_IN_DAYS=30
+
+PUBLIC_URL=https://yourdomain.com/car-reminder   # folosit pt. URL imagini
+CLIENT_URL=https://yourfrontend.com
+
+# OCR bonuri (opțional)
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Email rapoarte (opțional)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=user@example.com
+SMTP_PASS=yourpassword
+SMTP_FROM="Demo SRL <noreply@example.com>"
+
+# Push notificații (opțional)
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:admin@example.com
 ```
 
-Folosește `TRUST_PROXY=true` când API-ul este în spatele unui reverse proxy precum Nginx, Traefik, Caddy sau un load balancer.
+---
 
-## Auth flow
+## Flux complet decont (exemple curl)
 
-- `POST /api/auth/register` → returnează `user`, `accessToken`, `refreshToken`
-- `POST /api/auth/login` → returnează `user`, `accessToken`, `refreshToken`
-- `POST /api/auth/refresh` cu `{ "refreshToken": "..." }` → returnează token-uri noi
-- `POST /api/auth/logout` cu `{ "refreshToken": "..." }` → revocă refresh token-ul
-
-Access token-ul este scurt, refresh token-ul este salvat hash-uit în DB și rotit la fiecare refresh.
-
-## Main endpoints
-
-### Cars
-
-- `GET /api/cars`
-- `POST /api/cars`
-- `GET /api/cars/:id`
-- `PATCH /api/cars/:id`
-- `DELETE /api/cars/:id`
-
-### Reminders
-
-- `GET /api/reminders`
-- `GET /api/reminders/car/:carId`
-- `POST /api/reminders/car/:carId`
-- `PATCH /api/reminders/:id`
-- `POST /api/reminders/:id/renew`
-- `DELETE /api/reminders/:id`
-
-### Notifications
-
-- `GET /api/notifications/vapid-public-key`
-- `POST /api/notifications/subscribe`
-- `POST /api/notifications/unsubscribe`
-
-## Web Push
-
-Generează VAPID keys:
+### 1. Înregistrare companie + login
 
 ```bash
-npx tsx scripts/generate-vapid.ts
+# Register — creează company + admin
+curl -X POST http://localhost:4000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@firma.ro","password":"Parola123!","companyName":"Firma SRL","firstName":"Ion","lastName":"Popescu"}'
+
+# Login
+curl -X POST http://localhost:4000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@firma.ro","password":"Parola123!"}'
+# → { accessToken, refreshToken, user }
+
+TOKEN="<accessToken din răspuns>"
 ```
 
-Pune valorile în `.env`:
+### 2. Invită un angajat
 
-```env
-VAPID_PUBLIC_KEY="..."
-VAPID_PRIVATE_KEY="..."
-VAPID_SUBJECT="mailto:you@example.com"
+```bash
+curl -X POST http://localhost:4000/api/users/invite \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"angajat@firma.ro","firstName":"Maria","lastName":"Ion","role":"EMPLOYEE"}'
+# → { user, temporaryPassword }
 ```
 
-## Expo Push viitor
+### 3. Pornește o delegație
 
-Schema include deja `EXPO_PUSH` și `expoPushToken`. În `notifications.service.ts` există placeholder pentru integrarea Expo Push API.
+```bash
+curl -X POST http://localhost:4000/api/trips \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"destination":"Cluj-Napoca","purpose":"Intalnire client","startDate":"2026-06-15","budget":800}'
+# → { id: "trip-uuid", status: "ACTIVE", ... }
 
-## Cron remindere
-
-Implicit rulează zilnic la 08:00:
-
-```env
-REMINDER_CRON="0 8 * * *"
+TRIP_ID="<id din răspuns>"
 ```
 
-Cron-ul verifică reminderele, actualizează statusul și trimite notificări când documentul expiră în intervalul configurat.
+### 4. Upload bon + OCR
+
+```bash
+# Upload imagine bon
+curl -X POST http://localhost:4000/api/expenses/upload \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@bon.jpg"
+# → { imageUrl: "https://.../uploads/receipts/bon-resized.jpg" }
+
+IMAGE_URL="<imageUrl din răspuns>"
+
+# OCR extragere date
+curl -X POST http://localhost:4000/api/ocr/receipt \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"imageUrl\":\"$IMAGE_URL\"}"
+# → { amount: 250.50, currency: "RON", date: "2026-06-15", merchant: "Petrom",
+#     cif: "RO1234567", category: "COMBUSTIBIL", confidence: "high" }
+```
+
+### 5. Adaugă cheltuiala (se atașează automat la trip ACTIVE)
+
+```bash
+curl -X POST http://localhost:4000/api/expenses \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"category\":\"COMBUSTIBIL\",\"amount\":250.50,\"currency\":\"RON\",\"date\":\"2026-06-15\",\"merchant\":\"Petrom\",\"imageUrl\":\"$IMAGE_URL\",\"verified\":true}"
+```
+
+### 6. Închide delegația și trimite spre aprobare
+
+```bash
+# Închide
+curl -X POST http://localhost:4000/api/trips/$TRIP_ID/close \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"kmEnd": 45250}'
+
+# Trimite spre aprobare
+curl -X POST http://localhost:4000/api/trips/$TRIP_ID/submit \
+  -H "Authorization: Bearer $TOKEN"
+
+# Aprobă (MANAGER/ADMIN)
+curl -X POST http://localhost:4000/api/trips/$TRIP_ID/approve \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### 7. Generează raport PDF și trimite pe email
+
+```bash
+# Generează
+curl -X POST http://localhost:4000/api/reports/trip/$TRIP_ID \
+  -H "Authorization: Bearer $TOKEN"
+# → { id: "report-uuid", pdfPath: "...", ... }
+
+REPORT_ID="<id din răspuns>"
+
+# Descarcă PDF
+curl -O -J http://localhost:4000/api/reports/$REPORT_ID/download \
+  -H "Authorization: Bearer $TOKEN"
+
+# Trimite la contabil
+curl -X POST http://localhost:4000/api/reports/$REPORT_ID/send \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"to":"contabil@firma.ro"}'
+```
+
+### 8. Export CSV cheltuieli
+
+```bash
+curl "http://localhost:4000/api/expenses/export?from=2026-06-01&to=2026-06-30" \
+  -H "Authorization: Bearer $TOKEN" \
+  -o cheltuieli-iunie.csv
+```
+
+### 9. Dashboard mobil
+
+```bash
+curl http://localhost:4000/api/stats/summary \
+  -H "Authorization: Bearer $TOKEN"
+# → { activeTrip, currentMonth: { total, byCategory }, expiringDocuments }
+```
+
+---
+
+## Teste
+
+```bash
+npm test
+```
+
+3 suite-uri (18 teste):
+- `report-totals` — calcul subtotaluri/total raport, delta buget
+- `company-scoping` — izolare date între companii, restricție EMPLOYEE
+- `ocr-parsing` — parsare defensivă răspuns Claude (JSON fences, câmpuri lipsă, valori invalide)
+
+---
+
+## Structură proiect
+
+```
+src/
+├── app.ts                    # Express app + rute
+├── server.ts                 # Pornire server + cron
+├── config/env.ts             # Validare env cu Zod
+├── lib/
+│   ├── prisma.ts             # Prisma client singleton
+│   ├── tokens.ts             # JWT sign/verify (include companyId+role)
+│   ├── errors.ts             # AppError
+│   ├── mailer.ts             # nodemailer SMTP
+│   └── pdf.ts                # Generare PDF cu pdfkit
+├── middleware/
+│   ├── auth.ts               # requireAuth (Bearer token)
+│   ├── roles.ts              # requireRole(...roles)
+│   ├── validate.ts           # Zod validation middleware
+│   └── error.ts              # Error handler centralizat
+├── jobs/
+│   └── reminder-cron.ts      # Cron zilnic + digest email flotă
+└── modules/
+    ├── auth/                 # register (company+admin), login, refresh, logout
+    ├── users/                # /me, /invite, list
+    ├── company/              # GET/PATCH setări companie
+    ├── cars/                 # CRUD flotă
+    ├── reminders/            # CRUD remindere documente
+    ├── costs/                # CRUD costuri per vehicul
+    ├── fuel/                 # CRUD alimentări + analytics
+    ├── documents/            # Upload documente vehicul
+    ├── notifications/        # Push notifications (Web Push + Expo)
+    ├── trips/                # CRUD delegații + workflow aprobare
+    ├── expenses/             # CRUD cheltuieli + upload + export CSV
+    ├── ocr/                  # OCR bonuri cu Claude Haiku
+    ├── reports/              # Generare PDF + email
+    ├── fleet/                # Overview flotă cu status documente
+    └── stats/                # Dashboard summary
+```

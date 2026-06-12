@@ -20,7 +20,12 @@ const schema = z.object({
   REMINDER_CRON_TIMEZONE: z.string().default('Europe/Bucharest'),
   TRUST_PROXY: z.coerce.boolean().default(false),
   PUBLIC_URL: z.string().default('http://localhost:4000'),
-  ANTHROPIC_API_KEY: z.string().default('')
+  ANTHROPIC_API_KEY: z.string().default(''),
+  SMTP_HOST: z.string().default(''),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string().default(''),
+  SMTP_PASS: z.string().default(''),
+  SMTP_FROM: z.string().default('noreply@example.com')
 });
 
 export const env = schema.parse(process.env);
