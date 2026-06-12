@@ -16,6 +16,9 @@ import { costsRouter } from './modules/costs/costs.routes';
 import { fuelRouter } from './modules/fuel/fuel.routes';
 import { documentsRouter } from './modules/documents/documents.routes';
 import { companyRouter } from './modules/company/company.routes';
+import { tripsRouter } from './modules/trips/trips.routes';
+import { expensesRouter } from './modules/expenses/expenses.routes';
+import { ocrRouter } from './modules/ocr/ocr.routes';
 import { errorHandler, notFound } from './middleware/error';
 
 export const app = express();
@@ -41,6 +44,9 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/costs', costsRouter);
 app.use('/api/fuel', fuelRouter);
 app.use('/api/documents', documentsRouter);
+app.use('/api/trips', tripsRouter);
+app.use('/api/expenses', expensesRouter);
+app.use('/api/ocr', ocrRouter);
 
 app.use(notFound);
 app.use(errorHandler);
