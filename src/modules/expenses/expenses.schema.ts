@@ -35,3 +35,12 @@ export const listExpensesSchema = z.object({
     to: z.coerce.date().optional(),
   }),
 });
+
+export const exportExpensesSchema = z.object({
+  query: z.object({
+    from: z.coerce.date().optional(),
+    to: z.coerce.date().optional(),
+    userId: z.string().uuid().optional(),
+    format: z.enum(['csv']).default('csv'),
+  }),
+});

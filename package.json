@@ -13,7 +13,9 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "car",
@@ -63,7 +65,9 @@
     "@types/pdfkit": "^0.17.6",
     "@types/sharp": "^0.31.1",
     "@types/web-push": "3.6.4",
+    "@vitest/coverage-v8": "^4.1.8",
     "tsx": "4.22.3",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "^4.1.8"
   }
 }
