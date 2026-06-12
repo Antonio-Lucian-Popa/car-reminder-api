@@ -101,6 +101,11 @@ enum ExpenseCategory {
   ALTELE
 }
 
+enum ReportType {
+  TRIP
+  MONTHLY
+}
+
 model Company {
   id              String   @id @default(uuid())
   name            String
@@ -114,7 +119,9 @@ model Company {
   cars     Car[]
   trips    Trip[]
   expenses Expense[]
+  reports  Report[]
 }
+
 
 model User {
   id           String   @id @default(uuid())
@@ -319,4 +326,21 @@ model Expense {
 
   @@index([companyId, date])
   @@index([tripId])
+}
+
+model Report {
+  id        String     @id @default(uuid())
+  companyId String
+  type      ReportType
+  tripId    String?
+  month     String?
+  userId    String
+  pdfPath   String
+  sentTo    String?
+  sentAt    DateTime?
+  createdAt DateTime   @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, createdAt])
 }
