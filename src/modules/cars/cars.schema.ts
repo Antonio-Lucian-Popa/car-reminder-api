@@ -8,7 +8,8 @@ const carBody = z.object({
   vin: z.string().optional(),
   mileage: z.coerce.number().int().min(0).optional(),
   imageUrl: z.string().url().optional(),
-  color: z.string().optional()
+  color: z.string().optional(),
+  assignedUserId: z.string().uuid().optional()
 });
 
 export const createCarSchema = z.object({ body: carBody });

@@ -25,29 +25,28 @@ function serializeFuelLog(l: FuelLogRow) {
   };
 }
 
-async function getOwnedCarIds(userId: string, carId?: string): Promise<string[]> {
+async function getCompanyCarIds(companyId: string, carId?: string): Promise<string[]> {
   if (carId) {
-    const car = await prisma.car.findFirst({ where: { id: carId, userId } });
+    const car = await prisma.car.findFirst({ where: { id: carId, companyId } });
     if (!car) throw new AppError(404, 'Car not found');
     return [carId];
   }
-  const cars = await prisma.car.findMany({ where: { userId }, select: { id: true } });
+  const cars = await prisma.car.findMany({ where: { companyId }, select: { id: true } });
   return cars.map((c) => c.id);
 }
 
-async function getOwnedLog(id: string, userId: string) {
+async function getCompanyLog(id: string, companyId: string) {
   const log = await prisma.fuelLog.findFirst({
     where: { id },
-    include: { car: { select: { userId: true } } },
+    include: { car: { select: { companyId: true } } },
   });
-  if (!log || log.car.userId !== userId) throw new AppError(404, 'Fuel log not found');
+  if (!log || log.car.companyId !== companyId) throw new AppError(404, 'Fuel log not found');
   return log;
 }
 
-// GET /api/fuel/analytics — deve ficar antes de /:id
 fuelRouter.get('/analytics', validate(fuelAnalyticsSchema), async (req, res) => {
   const { carId } = req.query as { carId?: string };
-  const carIds = await getOwnedCarIds(req.user!.id, carId);
+  const carIds = await getCompanyCarIds(req.user!.companyId, carId);
 
   const logs = await prisma.fuelLog.findMany({
     where: { carId: { in: carIds }, fullTank: true },
@@ -97,7 +96,7 @@ fuelRouter.get('/analytics', validate(fuelAnalyticsSchema), async (req, res) => 
 
 fuelRouter.get('/', validate(fuelListSchema), async (req, res) => {
   const { carId } = req.query as { carId?: string };
-  const carIds = await getOwnedCarIds(req.user!.id, carId);
+  const carIds = await getCompanyCarIds(req.user!.companyId, carId);
   const logs = await prisma.fuelLog.findMany({
     where: { carId: { in: carIds } },
     orderBy: { date: 'desc' },
@@ -107,25 +106,25 @@ fuelRouter.get('/', validate(fuelListSchema), async (req, res) => {
 
 fuelRouter.post('/', validate(createFuelSchema), async (req, res) => {
   const { carId, ...data } = req.body;
-  await getOwnedCarIds(req.user!.id, carId);
+  await getCompanyCarIds(req.user!.companyId, carId);
   const log = await prisma.fuelLog.create({ data: { ...data, carId } });
   res.status(201).json(serializeFuelLog(log));
 });
 
 fuelRouter.get('/:id', validate(fuelIdSchema), async (req, res) => {
-  const log = await getOwnedLog(req.params.id as string, req.user!.id);
+  const log = await getCompanyLog(req.params.id as string, req.user!.companyId);
   const { car: _car, ...rest } = log;
   res.json(serializeFuelLog(rest));
 });
 
 fuelRouter.patch('/:id', validate(updateFuelSchema), async (req, res) => {
-  const existing = await getOwnedLog(req.params.id as string, req.user!.id);
+  const existing = await getCompanyLog(req.params.id as string, req.user!.companyId);
   const log = await prisma.fuelLog.update({ where: { id: existing.id }, data: req.body });
   res.json(serializeFuelLog(log));
 });
 
 fuelRouter.delete('/:id', validate(fuelIdSchema), async (req, res) => {
-  const existing = await getOwnedLog(req.params.id as string, req.user!.id);
+  const existing = await getCompanyLog(req.params.id as string, req.user!.companyId);
   await prisma.fuelLog.delete({ where: { id: existing.id } });
   res.status(204).send();
 });

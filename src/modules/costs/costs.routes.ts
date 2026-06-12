@@ -18,29 +18,28 @@ function serializeCost(c: { amount: { toString(): string }; [key: string]: unkno
   return { ...c, amount: parseFloat(c.amount.toString()) };
 }
 
-async function getOwnedCarIds(userId: string, carId?: string): Promise<string[]> {
+async function getCompanyCarIds(companyId: string, carId?: string): Promise<string[]> {
   if (carId) {
-    const car = await prisma.car.findFirst({ where: { id: carId, userId } });
+    const car = await prisma.car.findFirst({ where: { id: carId, companyId } });
     if (!car) throw new AppError(404, 'Car not found');
     return [carId];
   }
-  const cars = await prisma.car.findMany({ where: { userId }, select: { id: true } });
+  const cars = await prisma.car.findMany({ where: { companyId }, select: { id: true } });
   return cars.map((c) => c.id);
 }
 
-async function getOwnedCost(id: string, userId: string) {
+async function getCompanyCost(id: string, companyId: string) {
   const cost = await prisma.cost.findFirst({
     where: { id },
-    include: { car: { select: { userId: true } } },
+    include: { car: { select: { companyId: true } } },
   });
-  if (!cost || cost.car.userId !== userId) throw new AppError(404, 'Cost not found');
+  if (!cost || cost.car.companyId !== companyId) throw new AppError(404, 'Cost not found');
   return cost;
 }
 
-// GET /api/costs/summary — deve ficar antes de /:id
 costsRouter.get('/summary', validate(costSummarySchema), async (req, res) => {
   const { carId, month } = req.query as { carId?: string; month?: string };
-  const carIds = await getOwnedCarIds(req.user!.id, carId);
+  const carIds = await getCompanyCarIds(req.user!.companyId, carId);
 
   const dateFilter: { gte?: Date; lt?: Date } = {};
   if (month) {
@@ -64,7 +63,7 @@ costsRouter.get('/summary', validate(costSummarySchema), async (req, res) => {
 
 costsRouter.get('/', validate(costListSchema), async (req, res) => {
   const { carId } = req.query as { carId?: string };
-  const carIds = await getOwnedCarIds(req.user!.id, carId);
+  const carIds = await getCompanyCarIds(req.user!.companyId, carId);
   const costs = await prisma.cost.findMany({
     where: { carId: { in: carIds } },
     orderBy: { date: 'desc' },
@@ -74,25 +73,25 @@ costsRouter.get('/', validate(costListSchema), async (req, res) => {
 
 costsRouter.post('/', validate(createCostSchema), async (req, res) => {
   const { carId, ...data } = req.body;
-  await getOwnedCarIds(req.user!.id, carId);
+  await getCompanyCarIds(req.user!.companyId, carId);
   const cost = await prisma.cost.create({ data: { ...data, carId } });
   res.status(201).json(serializeCost(cost));
 });
 
 costsRouter.get('/:id', validate(costIdSchema), async (req, res) => {
-  const cost = await getOwnedCost(req.params.id as string, req.user!.id);
+  const cost = await getCompanyCost(req.params.id as string, req.user!.companyId);
   const { car: _car, ...rest } = cost;
   res.json(serializeCost(rest));
 });
 
 costsRouter.patch('/:id', validate(updateCostSchema), async (req, res) => {
-  const existing = await getOwnedCost(req.params.id as string, req.user!.id);
+  const existing = await getCompanyCost(req.params.id as string, req.user!.companyId);
   const cost = await prisma.cost.update({ where: { id: existing.id }, data: req.body });
   res.json(serializeCost(cost));
 });
 
 costsRouter.delete('/:id', validate(costIdSchema), async (req, res) => {
-  const existing = await getOwnedCost(req.params.id as string, req.user!.id);
+  const existing = await getCompanyCost(req.params.id as string, req.user!.companyId);
   await prisma.cost.delete({ where: { id: existing.id } });
   res.status(204).send();
 });

@@ -25,26 +25,26 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /image\/(jpeg|jpg|png|webp|heic)|application\/pdf/;
     cb(null, allowed.test(file.mimetype));
   },
 });
 
-async function getOwnedCarIds(userId: string, carId?: string): Promise<string[]> {
+async function getCompanyCarIds(companyId: string, carId?: string): Promise<string[]> {
   if (carId) {
-    const car = await prisma.car.findFirst({ where: { id: carId, userId } });
+    const car = await prisma.car.findFirst({ where: { id: carId, companyId } });
     if (!car) throw new AppError(404, 'Car not found');
     return [carId];
   }
-  const cars = await prisma.car.findMany({ where: { userId }, select: { id: true } });
+  const cars = await prisma.car.findMany({ where: { companyId }, select: { id: true } });
   return cars.map((c) => c.id);
 }
 
 documentsRouter.get('/', validate(docListSchema), async (req, res) => {
   const { carId } = req.query as { carId?: string };
-  const carIds = await getOwnedCarIds(req.user!.id, carId);
+  const carIds = await getCompanyCarIds(req.user!.companyId, carId);
   const docs = await prisma.document.findMany({
     where: { carId: { in: carIds } },
     orderBy: { createdAt: 'desc' },
@@ -55,7 +55,7 @@ documentsRouter.get('/', validate(docListSchema), async (req, res) => {
 documentsRouter.post('/', upload.single('file'), validate(createDocumentSchema), async (req, res) => {
   if (!req.file) throw new AppError(400, 'File is required');
   const { carId, type, title, linkedCostId, linkedReminderId } = req.body;
-  await getOwnedCarIds(req.user!.id, carId);
+  await getCompanyCarIds(req.user!.companyId, carId);
   const publicUrl = env.PUBLIC_URL.replace(/\/$/, '');
   const imageUrl = `${publicUrl}/api/uploads/documents/${req.file.filename}`;
   const doc = await prisma.document.create({
@@ -67,11 +67,10 @@ documentsRouter.post('/', upload.single('file'), validate(createDocumentSchema),
 documentsRouter.delete('/:id', validate(docIdSchema), async (req, res) => {
   const doc = await prisma.document.findFirst({
     where: { id: req.params.id as string },
-    include: { car: { select: { userId: true } } },
+    include: { car: { select: { companyId: true } } },
   });
-  if (!doc || doc.car.userId !== req.user!.id) throw new AppError(404, 'Document not found');
+  if (!doc || doc.car.companyId !== req.user!.companyId) throw new AppError(404, 'Document not found');
 
-  // Remove file from disk (extract relative path from full URL)
   const filename = path.basename(doc.imageUrl);
   const filePath = path.join(process.cwd(), 'uploads', 'documents', filename);
   fs.unlink(filePath, () => {/* best-effort */});
